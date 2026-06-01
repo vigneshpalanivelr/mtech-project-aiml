@@ -3,194 +3,126 @@
 
 ---
 
-## TODAY - JUNE 1 (SATURDAY)
-**Critical Setup Day - MUST DO TODAY**
+## JUNE 1 STATUS — PHASE 1 IN PROGRESS
+**Platform: Google Colab Pro (500 compute units)**
 
-### Morning (06:00-10:00)
-- [ ] Read EMERGENCY_JUNE_JULY_TIMELINE.md (30 min)
-- [ ] Call College IT for cluster access (30 min)
-  - Phone: [IT number]
-  - Ask: "Need cluster access by June 3 for M.Tech project"
-- [ ] Email IT formally + CC supervisor (30 min)
+### Phase 1 Checklist:
+- [ ] Baseline DocLayout-YOLO reproduced
+- [ ] Baseline mAP: 70%+
+- [ ] Zero-shot mAP: 75%+
+- [ ] Checkpoint backed up to Google Drive
+- [ ] GitHub updated
+- [ ] College cluster confirmed unavailable → committed to Google Colab Pro (500 units)
 
-### Afternoon (10:00-14:00)
-- [ ] Download all phase context documents
-- [ ] Test Phase 1 baseline code locally (1 hour)
-- [ ] Create/update GitHub repo
-- [ ] Push code to GitHub with README
-
-### Evening (14:00-18:00)
-- [ ] START D⁴LA download (10GB) - run overnight
-  - Use wget or torrent
-  - Target: External drive or /downloads/
-- [ ] Notify supervisor about timeline change
-- [ ] Review COLAB_VS_CLUSTER_DECISION_MATRIX.txt
-
-### EOD June 1
-- [ ] Cluster request submitted
-- [ ] Code pushed to GitHub
-- [ ] D⁴LA download started
-- [ ] Supervisor notified
-- **Status: ✓ Setup in progress**
+**Work through Phase 1 first. See JUNE01.md for the Colab notebook setup.**
 
 ---
 
-## WEEK 1: SETUP & PHASE 1 (June 1-8)
-### GPU Target: 20 hours | Project Time: 8 days
-
-**June 2 (SUNDAY)**
-- [ ] Verify D⁴LA download (check if complete)
-- [ ] Follow up with College IT (if no response)
-- [ ] Prepare backup: Set up Colab Pro account (just in case)
-- [ ] Review Phase 1 commands (baseline training)
-- **Status:** Waiting for cluster access
-
-**June 3 (MONDAY)** ← CRITICAL MILESTONE
-- [ ] Receive cluster credentials (EXPECTED)
-- [ ] SSH into cluster
-- [ ] Set up conda environment
-  ```bash
-  conda create -n doclayout python=3.10
-  conda activate doclayout
-  pip install ultralytics opencv-python pyyaml pycocotools
-  ```
-- [ ] Test GPU: `nvidia-smi`
-- [ ] Mount scratch directory
-- **Status:** Cluster should be ready by EOD
-
-**June 4 (TUESDAY)**
-- [ ] Transfer D⁴LA to cluster (or download directly)
-- [ ] Download DocLayNet (30GB) to cluster
-- [ ] Check storage usage: `du -sh /scratch/`
-- [ ] Create data.yaml files
-- **Status:** Datasets staged on cluster
-
-**June 5 (WEDNESDAY)**
-- [ ] Verify dataset integrity (file counts, sizes)
-- [ ] Organize /data/raw/ structure
-- [ ] Run first test training (1 epoch, quick test)
-- [ ] Check loss curves (make sure no errors)
-- **Status:** Ready for full training
-
-**June 6 (THURSDAY)**
-- [ ] Start baseline training (50 epochs, 20 GPU-hours)
-  - This will take ~20 hours continuous
-  - Monitor loss curve (check hourly first 2 hours)
-- [ ] Set up monitoring script
-- **Status:** Training in progress
-
-**June 7-8 (FRI-SAT)**
-- [ ] Monitor training progress (email alerts if GPU crashes)
-- [ ] Once training complete: evaluate on D⁴LA test
-- [ ] Evaluate zero-shot on DocLayNet
-- [ ] Save results to Phase_1_RESULTS.json
-- [ ] Backup checkpoint to Google Drive
-- [ ] Delete D⁴LA + DocLayNet (free 40GB space)
-- **Status:** Phase 1 COMPLETE ✓
-
-**June 8 EOD CHECKPOINT:**
-- [ ] Phase 1 complete
-- [ ] Baseline mAP: 70%+ ✓
-- [ ] Zero-shot mAP: 75%+ ✓
-- [ ] Checkpoint backed up ✓
-- [ ] GitHub updated ✓
-- **GPU-hours used: 20 | Remaining: 140**
+## WEEK 1 — PHASE 1: SETUP & BASELINE (June 1-8)
+### Colab units target: ~20 | Units remaining: ~500
 
 ---
 
 ## WEEK 2-3: SYNTHETIC DATA GENERATION (June 9-22)
-### GPU Target: 40 hours | Project Time: 14 days
+### Colab Target: ~30 compute units | Project Time: 14 days
+### Environment: Google Colab Pro + Google Drive
 
-**June 9-10 (SUN-MON)**
-- [ ] Install HarfBuzz + fonts on cluster
-- [ ] Prepare layout templates (15 templates)
-- [ ] Download text corpora (Hindi, Tamil, Bengali, Telugu)
-- [ ] Generate 100 test images
-- [ ] Verify image quality (visual check)
+**June 9-10 (SUN-MON) — Colab Setup + Test Generation**
+- [ ] Open Colab, mount Drive, run JUNE01.md Cell 1 (session setup)
+- [ ] Install packages: uharfbuzz, pillow, ultralytics, tqdm (Cell 1 handles this)
+- [ ] Download all 10 Noto Sans fonts to Drive (JUNE01.md Cell 3)
+- [ ] Download text corpus for all 10 scripts (JUNE01.md Cell 4)
+- [ ] Write src/ modules to Drive using %%writefile (Cells 5-8)
+- [ ] Generate 10 test documents and visually inspect (Cell 9)
 - **Status:** Synthetic generation ready
 
-**June 11-15 (TUE-SAT)**
-- [ ] Generate 100K synthetic images in batches
-  - Batch 1-10: 10K images each
-  - Monitor storage (each batch ~3GB)
-  - Delete after COCO annotation created
-- [ ] Generate COCO annotations for each batch
-- [ ] Merge all annotations into single file
+**June 11-15 (TUE-SAT) — Full Generation (run off-peak 8 PM - 8 AM UTC)**
+- [ ] Run full generation: 50,000 documents (JUNE01.md Cell 10)
+  - Generation is CPU-heavy, ~3-4 hours total
+  - Auto-resumes if Colab disconnects (tracks already_done count)
+  - Each doc ~50 KB, total ~2.5 GB in Drive
+- [ ] Run keep-alive in separate Colab tab during generation
+- [ ] Monitor Drive storage: !du -sh /content/drive/MyDrive/doclayout-yolo-indic/
 - **Status:** Synthetic dataset created
 
-**June 16-22 (SUN-SAT)**
-- [ ] Create data.yaml for synthetic dataset
-- [ ] Start pretraining (50 epochs, ~20 GPU-hours)
-  - Batch size: 32
-  - Learning rate: 0.01
-  - Image size: 1280
+**June 16-22 (SUN-SAT) — COCO Manifest + Pretraining (off-peak)**
+- [ ] Create COCO train/val manifests (JUNE01.md Cell 11)
+- [ ] Create data.yaml for training (Cell 12)
+- [ ] Start pretraining (30 epochs, JUNE01.md Cell 13)
+  - Batch size: 16 (Colab GPU memory constraint)
+  - Runs ~15-20 hours off-peak (8 PM - 8 AM UTC)
+  - Uses ~20-25 Colab compute units
 - [ ] Monitor validation mAP (should increase steadily)
-- [ ] Save best checkpoint
-- [ ] Backup to Google Drive
+- [ ] Save best checkpoint to Drive: output/checkpoints/doclayout_yolo_indic_pretrained.pt
 - **Status:** Pretraining complete
 
 **June 22 EOD CHECKPOINT:**
-- [ ] 100K synthetic images generated ✓
+- [ ] 50K synthetic images generated in Drive ✓
+- [ ] COCO annotations created ✓
 - [ ] Pretraining complete ✓
-- [ ] Pretrained mAP: 65%+ ✓
-- [ ] Checkpoint backed up ✓
+- [ ] Pretrained mAP: 60%+ ✓
+- [ ] Checkpoint backed up in Drive ✓
 - [ ] GitHub updated ✓
-- **GPU-hours used: 60 | Remaining: 100**
+- **Colab units used: ~50 | Units remaining: ~450**
 
 ---
 
 ## WEEK 4-5: SELF-TRAINING & FINE-TUNING (June 23-July 6)
-### GPU Target: 60 hours | Project Time: 14 days
+### Colab Target: ~60 compute units | Project Time: 14 days
+### Environment: Google Colab Pro + Google Drive
 
 **June 23 (SUNDAY)**
-- [ ] Download IndicDLP (40GB) to cluster
-- [ ] Download BaDLAD partial (25GB) to cluster
-- [ ] Archive synthetic data to Google Drive (free space)
-- [ ] Organize /data/raw/ for Phase 3
+- [ ] Download IndicDLP (40GB) to Colab runtime: !wget ... -O /content/indicdlp.tar.gz
+  - Extract to Drive: /content/drive/MyDrive/doclayout-yolo-indic/data/raw/IndicDLP/
+- [ ] Download BaDLAD partial (25GB) similarly to Drive
+- [ ] Check Drive storage: !du -sh /content/drive/MyDrive/doclayout-yolo-indic/
+  - Delete output/synthetic/images/ AFTER pretraining is confirmed (saves ~2.5 GB)
+- [ ] Organize data/raw/ structure in Drive
 - **Status:** Datasets ready for self-training
 
 **June 24-27 (MON-THU)**
-- [ ] Load Phase 2 pretrained checkpoint
-- [ ] Run inference on BaDLAD-unlabeled (200K images)
-  - This is fast (no training, just inference)
-  - Save predictions with confidence scores
+- [ ] In Colab: load Phase 2 pretrained checkpoint from Drive
+- [ ] Run inference on BaDLAD-unlabeled (off-peak, ~3 hours)
+  - No training, just inference → fast and cheap (~5 units)
+  - Save predictions with confidence scores to Drive JSON
 - [ ] Generate pseudo-labels with class-balanced thresholds
 - [ ] Create pseudo-labeled dataset
-- [ ] Check pseudo-label quality (sample visualizations)
+- [ ] Check pseudo-label quality: visualize 10 random samples in Colab
 - **Status:** Pseudo-labels ready
 
 **June 28-Jul 2 (FRI-WED)**
-- [ ] Train Round 1 self-training (20 epochs, 20 GPU-hours)
+- [ ] Train Round 1 self-training (20 epochs, off-peak)
   - Mix: 50% IndicDLP labeled + 50% pseudo-labeled BaDLAD
+  - batch=16, runs ~20 hours = ~20 Colab units (off-peak)
   - Monitor: Check if validation mAP improves
-- [ ] Evaluate Round 1 checkpoint
-- [ ] **Decision Point (June 30 evening):**
+- [ ] Evaluate Round 1 checkpoint from Drive
+- [ ] Decision Point (June 30 evening):
   - If ahead of schedule: Proceed to Round 2
   - If on schedule: Skip Round 2, go to fine-tuning
   - If behind: Skip Round 2 definitely
 
 **July 3-6 (THU-SUN)**
-- [ ] Fine-tune on IndicDLP labeled (20 epochs, 20 GPU-hours)
-  - Load best checkpoint from self-training
-  - Train on 40K labeled images only
-  - Use early stopping (patience=3)
+- [ ] Fine-tune on IndicDLP labeled (20 epochs, off-peak)
+  - Load best checkpoint from self-training (from Drive)
+  - Train on labeled images only, early stopping patience=3
+  - ~20 hours = ~20 Colab units (off-peak)
 - [ ] Evaluate final model
-- [ ] Save final checkpoint
-- [ ] Backup to Google Drive
+- [ ] Save final checkpoint to Drive: output/checkpoints/doclayout_yolo_indic_finetuned.pt
 - **Status:** Phase 3 complete
 
 **July 6 EOD CHECKPOINT:**
 - [ ] Self-training complete ✓
 - [ ] Fine-tuning complete ✓
 - [ ] Final mAP on IndicDLP: 72-75% ✓
-- [ ] Checkpoint backed up ✓
+- [ ] Checkpoint saved to Drive ✓
 - [ ] GitHub updated ✓
-- **GPU-hours used: 120 | Remaining: 40**
+- **Colab units used: ~120 | Units remaining: ~380**
 
 ---
 
 ## WEEK 6-7: EVALUATION & ANALYSIS (July 7-20)
-### GPU Target: 25 hours | Project Time: 14 days
+### Colab Target: ~15 compute units | Project Time: 14 days
+### Environment: Google Colab Pro + Google Drive (inference only, no heavy training)
 
 **July 7-8 (MON-TUE)**
 - [ ] Evaluate on IndicDLP test (full evaluation)
@@ -234,7 +166,7 @@
 - [ ] Failure analysis complete ✓
 - [ ] Results compiled ✓
 - [ ] Figures ready ✓
-- **GPU-hours used: 145 | Remaining: 15**
+- **Colab units used: ~145 | Units remaining: ~355**
 
 ---
 
@@ -257,7 +189,7 @@
 - [ ] Update README with installation + usage + results
 - [ ] Add requirements.txt
 - [ ] Create reproducibility guide
-- [ ] Final tests on cluster (verify code works)
+- [ ] Final tests in Colab (verify code works end-to-end)
 - [ ] Push final code to GitHub
 - [ ] Tag release (v1.0)
 - **Status:** Code released
@@ -327,12 +259,13 @@ PHASE: [Phase 1-5]
 
 | Milestone | Date | Status | Action If Missed |
 |-----------|------|--------|-----------------|
-| Cluster access | Jun 3 | MUST HAVE | Activate Colab backup |
-| Phase 1 complete | Jun 8 | MUST HAVE | Start Phase 2 immediately |
-| Phase 2 complete | Jun 22 | MUST HAVE | Compress Phase 3 timeline |
-| Phase 3 complete | Jul 6 | MUST HAVE | Skip ablations if needed |
-| Phase 4 complete | Jul 20 | MUST HAVE | Fast-track paper writing |
+| Phase 1 complete | Jun 8 | In progress | Extend timeline if needed |
+| Phase 2 complete | Jun 22 | Pending | Compress Phase 3 timeline |
+| Phase 3 complete | Jul 6 | Pending | Skip ablations if needed |
+| Phase 4 complete | Jul 20 | Pending | Fast-track paper writing |
 | Submit | Jul 31 | HARD DEADLINE | PROJECT FAILS if missed |
+
+**Platform: Google Colab Pro — 500 compute units available (~450 remaining after Phase 1)**
 
 ---
 

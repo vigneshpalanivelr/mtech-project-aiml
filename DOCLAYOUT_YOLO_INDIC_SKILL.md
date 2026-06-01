@@ -22,6 +22,80 @@ This skill provides a standardized structure and patterns for implementing the D
 
 ---
 
+## Google Colab Adaptation
+
+All training runs on **Google Colab Pro** (500 compute units). Files persist on **Google Drive**.
+
+### Path Mapping (Local → Colab)
+
+| SKILL docs reference | Actual Colab path |
+|---|---|
+| `doclayout-yolo-indic/` | `/content/drive/MyDrive/doclayout-yolo-indic/` |
+| `src/` | `/content/drive/MyDrive/doclayout-yolo-indic/src/` |
+| `data/` | `/content/drive/MyDrive/doclayout-yolo-indic/data/` |
+| `output/` | `/content/drive/MyDrive/doclayout-yolo-indic/output/` |
+
+### Required: Start of Every Colab Session
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path('/content/drive/MyDrive/doclayout-yolo-indic')
+sys.path.insert(0, str(PROJECT_ROOT))
+
+!pip install ultralytics uharfbuzz pillow numpy opencv-python tqdm matplotlib pycocotools -q
+```
+
+### Writing Python Modules to Drive
+
+Use `%%writefile` to create persistent source files:
+```python
+%%writefile /content/drive/MyDrive/doclayout-yolo-indic/src/config.py
+from pathlib import Path
+PROJECT_ROOT = Path('/content/drive/MyDrive/doclayout-yolo-indic')
+DATA_DIR = PROJECT_ROOT / 'data'
+OUTPUT_DIR = PROJECT_ROOT / 'output'
+```
+
+### Config.py for Colab (use instead of the local version)
+
+```python
+import os
+from pathlib import Path
+
+if os.path.exists('/content/drive/MyDrive'):
+    PROJECT_ROOT = Path('/content/drive/MyDrive/doclayout-yolo-indic')
+else:
+    PROJECT_ROOT = Path('.')  # Local dev fallback
+
+DATA_DIR = PROJECT_ROOT / 'data'
+OUTPUT_DIR = PROJECT_ROOT / 'output'
+DEVICE = "cuda"  # Colab provides CUDA GPU
+BATCH_SIZE = 16  # Reduced from 32 for Colab GPU memory
+NUM_SYNTHETIC_DOCS = 50000  # Reduced from 150K for Colab storage
+```
+
+### Storage Management (100 GB Drive limit)
+
+| Phase | Data | Size | Action |
+|---|---|---|---|
+| Phase 1 | D4LA + DocLayNet | ~40 GB | Delete after Phase 1 ✅ |
+| Phase 2 | Synthetic images | ~2.5 GB | Keep until pretraining confirmed |
+| Phase 3 | IndicDLP + BaDLAD | ~65 GB | Download when needed, delete after |
+| All phases | Checkpoints | ~0.5 GB each | Keep only best |
+
+### Off-Peak Training (IMPORTANT — saves compute units)
+
+- Run training **only 8 PM – 8 AM UTC**
+- Off-peak costs ~5 units/hour vs ~10 units/hour peak
+- Always run keep-alive in a separate tab during long jobs
+
+---
+
 ## When to Use This Skill
 
 Trigger this skill whenever:
