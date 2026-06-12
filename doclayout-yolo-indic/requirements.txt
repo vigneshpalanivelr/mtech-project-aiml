@@ -1,0 +1,15 @@
+# --- Phase 2: synthetic data engine (CPU, runs anywhere) ---
+uharfbuzz>=0.39.0      # Indic/Arabic text shaping
+fonttools>=4.50.0      # glyph outline extraction + font validation
+pillow>=10.0.0         # rasterization
+numpy>=1.24.0
+tqdm>=4.66.0
+
+# --- Phase 2 Step 7 + Phase 3+: training (GPU box) ---
+# Install these on the A100 machine; not needed for data generation.
+torch>=2.1.0
+torchvision>=0.16.0
+ultralytics>=8.1.0
+doclayout-yolo>=0.0.3  # wraps the public DocLayout-YOLO checkpoint/inference
+pycocotools>=2.0.7
+matplotlib>=3.8.0

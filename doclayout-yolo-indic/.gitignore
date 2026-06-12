@@ -1,0 +1,6 @@
+data/fonts/*.ttf
+data/raw/
+output/
+__pycache__/
+*.pyc
+.venv/
