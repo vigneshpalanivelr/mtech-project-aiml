@@ -86,6 +86,23 @@ except Exception:
     pass
 
 
+# The G2L_CRM (GL-CRM) block in this doclayout_yolo fork reads self.dcv.bn inside
+# its forward pass. Model fusion folds Conv+BN together and removes .bn, so the
+# fused inference path crashes ("'Conv' object has no attribute 'bn'") during the
+# post-training validation. Make fuse() a no-op: validation then runs on the
+# unfused model, which is numerically identical, just marginally slower.
+try:
+    from doclayout_yolo.nn.tasks import BaseModel as _BaseModel
+    if not getattr(_BaseModel.fuse, "_noop_patched", False):
+        def _fuse_noop(self, *a, **k):
+            return self
+
+        _fuse_noop._noop_patched = True
+        _BaseModel.fuse = _fuse_noop
+except Exception:
+    pass
+
+
 # ---------------------------------------------------------------------------
 # CBST hyper-parameters
 # ---------------------------------------------------------------------------
@@ -160,7 +177,8 @@ def _predict_paths(model, src_paths, conf, imgsz, device):
 
 
 def collect_predictions(model, image_dir, conf=INFER_CONF, imgsz=INFER_IMGSZ,
-                        batch=INFER_BATCH, device=0, limit=None, log_every=1000):
+                        batch=INFER_BATCH, device=0, limit=None, log_every=1000,
+                        exclude_stems=None):
     """Run inference over `image_dir` and return per-image detections.
 
     Hardened for large, messy, real-world datasets:
@@ -169,7 +187,9 @@ def collect_predictions(model, image_dir, conf=INFER_CONF, imgsz=INFER_IMGSZ,
       - on a batch failure, retries one image at a time so a single bad page
         costs one skip rather than the whole batch,
       - logs progress so any failure point is visible,
-      - frees GPU cache periodically to avoid creep over a long sweep.
+      - frees GPU cache periodically to avoid creep over a long sweep,
+      - `exclude_stems`: image stems to skip (the labeled + val images), so the
+        held-out val never enters the pseudo-labeled training pool (no leakage).
 
     Boxes are stored normalised (xywhn), so they are valid for the ORIGINAL image
     regardless of any pre-shrink. Returns:
@@ -179,6 +199,11 @@ def collect_predictions(model, image_dir, conf=INFER_CONF, imgsz=INFER_IMGSZ,
     image_dir = Path(image_dir)
     images = sorted(p for p in image_dir.rglob("*")
                     if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"})
+    if exclude_stems:
+        before = len(images)
+        images = [p for p in images if p.stem not in exclude_stems]
+        logger.info("Excluded %d labeled/val images from the unlabeled pool",
+                    before - len(images))
     if limit:
         images = images[:limit]
     logger.info("Pseudo-label inference over %d images from %s", len(images), image_dir)
@@ -501,11 +526,15 @@ def self_train_round(weights, data_yaml, project, name, epochs=TRAIN_EPOCHS,
 # 5. Orchestrator: pseudo-label -> train, repeated for N rounds
 # ---------------------------------------------------------------------------
 def run_self_training(pretrained, unlabeled_dir, labeled_yaml, work_dir,
-                      num_rounds=2, device=0, infer_limit=None):
+                      num_rounds=2, device=0, infer_limit=None,
+                      exclude_stems_file=None):
     """Full CBST loop. Each round: pseudo-label the unlabeled set with the
     current model, write a mixed dataset, train. The next round re-pseudo-labels
     with the improved model and a relaxed portion. Everything is skip-if-exists
     so a disconnected Colab session resumes cleanly.
+
+    `exclude_stems_file`: JSON list of image stems (labeled + val) to skip during
+    inference, so the held-out val never leaks into the pseudo-labeled pool.
 
     Returns the best.pt of the final round (input to fine-tuning).
     """
@@ -513,6 +542,12 @@ def run_self_training(pretrained, unlabeled_dir, labeled_yaml, work_dir,
     work_dir.mkdir(parents=True, exist_ok=True)
     current_weights = Path(pretrained)
     final_best = None
+
+    exclude_stems = set()
+    if exclude_stems_file and Path(exclude_stems_file).exists():
+        exclude_stems = set(json.loads(Path(exclude_stems_file).read_text()))
+        logger.info("Loaded %d exclude stems (labeled+val) from %s",
+                    len(exclude_stems), exclude_stems_file)
 
     for rnd in range(1, num_rounds + 1):
         portion = PORTION_SCHEDULE[min(rnd - 1, len(PORTION_SCHEDULE) - 1)]
@@ -536,7 +571,8 @@ def run_self_training(pretrained, unlabeled_dir, labeled_yaml, work_dir,
         if not labels_dir.exists() or not any(labels_dir.glob("*.txt")):
             model, names = load_detector(current_weights)
             records = collect_predictions(model, unlabeled_dir, device=device,
-                                          limit=infer_limit)
+                                          limit=infer_limit,
+                                          exclude_stems=exclude_stems)
             thresholds = compute_cbst_thresholds(records, num_classes=len(names),
                                                  portion=portion)
             kept, stats = filter_with_thresholds(records, thresholds)
